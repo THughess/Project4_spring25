@@ -16,7 +16,7 @@ char *allowed[N] = {"cp","touch","mkdir","ls","pwd","cat","grep","chmod","diff",
 
 struct message {
 	char source[50];
-	char target[50]; 
+	char target[50];
 	char msg[200];
 };
 
@@ -30,14 +30,21 @@ void sendmsg (char *user, char *target, char *msg) {
 	// TODO:
 	// Send a request to the server to send the message (msg) to the target user (target)
 	// by creating the message structure and writing it to server's FIFO
+	struct message msg1;
 
+	fprintf(stderr, "source: %s\n", user);
+	fprintf(stderr, "target: %s\n", target);
+	fprintf(stderr, "message: %s\n", msg);
 
+	strcpy(msg1.source, user);
+	strcpy(msg1.target, target);
+	strcpy(msg1.msg, msg);
 
+	int server = open("serverFIFO", O_WRONLY);
+	write(server, &msg1, sizeof(struct message));
+	close(server);
 
-
-
-
-
+	return;
 }
 
 void* messageListener(void *arg) {
@@ -48,11 +55,16 @@ void* messageListener(void *arg) {
 	// following format
 	// Incoming message from [source]: [message]
 	// put an end of line at the end of the message
+	int listen = open(uName, O_RDONLY);
+	struct message listenmsg;
+	while(1){
+		if(read(listen, &listenmsg, sizeof(struct message)) != sizeof(struct message)){ // if no incoming requests are message structs
+			continue;
+		}
 
-
-
-
-
+		printf("Incoming message from %s: %s\n", listenmsg.source, listenmsg.msg);
+	}
+	close(listen);
 
 	pthread_exit((void*)0);
 }
@@ -86,9 +98,8 @@ int main(int argc, char **argv) {
     // TODO:
     // create the message listener thread
 
-
-
-
+	pthread_t tid1;
+	pthread_create(&tid1, NULL, messageListener, NULL);
 
     while (1) {
 
@@ -123,15 +134,18 @@ int main(int argc, char **argv) {
 		// printf("sendmsg: you have to specify target user\n");
 		// if no message is specified, you should print the followingA
  		// printf("sendmsg: you have to enter a message\n");
+		char* token = strtok(NULL, " ");
+		if(token == NULL){
+			printf("sendmsg: you have to specify target user\n");
+			continue;
+		}
+		char* msg2 = strtok(NULL, "\0");
+		if(msg2 == NULL){
+			printf("sendmsg: you have to enter a message\n");
+			continue;
+		}
 
-
-
-
-
-
-
-
-
+		sendmsg(uName, token, msg2);
 
 		continue;
 	}
